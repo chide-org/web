@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简时钟备忘录 Pro+</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --memo-bg: rgba(255, 255, 255, 0.85);
+            --text-primary: #333;
+            --clock-color: #fff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background-image: var(--bg-image);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            overflow: hidden;
+            transition: background-image 0.5s ease;
+        }
+
+        /* --- 左上角全屏按钮 --- */
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            backdrop-filter: blur(4px);
+            transition: background 0.3s;
+        }
+        .fullscreen-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        /* --- 左侧：信息面板 --- */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--clock-color);
+            padding: 20px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .clock-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .flip-clock {
+            display: flex;
+            gap: 15px;
+            font-size: 10vw;
+            font-weight: 800;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .flip-card {
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #f0f0f0;
+            padding: 20px 5px;
+            border-radius: 12px;
+            min-width: 14vw;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .flip-card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(255,255,255,0.1);
+            box-shadow: 0 1px 1px rgba(0,0,0,0.4);
+        }
+
+        .colon {
+            font-size: 8vw;
+            align-self: center;
+            margin-top: -20px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .date-display {
+            margin-top: 20px;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        /* 天气区域 */
+        .weather-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            cursor: pointer; /* 提示可点击 */
+            transition: transform 0.2s;
+            position: relative;
+        }
+        .weather-container:hover {
+            transform: scale(1.02);
+            background: rgba(0, 0, 0, 0.4);
+        }
+        /* 提示手动输入 */
+        .weather-tip {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        .weather-temp { font-size: 2.5rem; font-weight: bold; }
+        .weather-desc { font-size: 1.2rem; margin: 5px 0 15px; }
+        .weather-advice { font-size: 1rem; font-style: italic; color: #ffd700; }
+
+        /* 城市搜索输入框 (默认隐藏) */
+        .city-input-layer {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(44, 62, 80, 0.95);
+            border-radius: 15px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            z-index: 10;
+        }
+        .city-input-layer input {
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 8px;
+            width: 80%;
+            text-align: center;
+        }
+        .city-input-layer button {
+            padding: 5px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* 背景设置按钮 */
+        .bg-settings-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+        }
+        .bg-input-container {
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            display: none;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+        .bg-input-container input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 5px;
+            width: 200px;
+        }
+        .bg-input-container button {
+            padding: 5px 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* --- 右侧：备忘录区域 --- */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .memo-box {
+            width: 100%;
+            max-width: 800px;
+            height: 90%;
+            background-color: var(--memo-bg);
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .memo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .memo-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .font-scale-controls button {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            color: #555;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 5px;
+            transition: all 0.2s;
+        }
+        .font-scale-controls button:hover { background: rgba(0,0,0,0.1); color: #000; }
+
+        .memo-editor-container {
+            flex-grow: 1;
+            position: relative;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* 核心：字体大小由JS直接控制，不再使用 rem */
+        .memo-content-common {
+            width: 100%;
+            min-height: 100%;
+            padding: 25px;
+            /* font-size: 1.1rem;  移除导致问题的 rem 设置 */ 
+            line-height: 1.7;
+            color: var(--text-primary);
+            outline: none;
+            border: none;
+            resize: none;
+            background: transparent;
+            font-family: inherit;
+        }
+
+        #memo-textarea {
+            display: none; 
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        #memo-preview {
+            display: block;
+            cursor: text;
+        }
+        
+        #memo-preview h1 { border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px; margin-top: 0.5em;}
+        #memo-preview p { margin-bottom: 0.5em; }
+        #memo-preview ul { margin-left: 20px; }
+        #memo-preview a { color: #667eea; }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; overflow-y: auto; }
+            .left-panel { flex: 0 0 auto; padding: 40px 20px 20px; } /* Top padding for fullscreen btn */
+            .flip-clock { font-size: 18vw; }
+            .flip-card { min-width: 22vw; }
+            .colon { font-size: 14vw; }
+            .right-panel { flex: 1; padding: 15px; height: auto; min-height: 60vh; }
+            .memo-box { height: 100%; border-radius: 16px; }
+            .bg-settings-btn { bottom: 10px; left: 10px; }
+            .bg-input-container { bottom: 50px; left: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="fullscreen-btn" onclick="toggleFullScreen()" title="全屏切换">⛶</button>
+
+    <div class="left-panel">
+        <div class="clock-container">
+            <div class="flip-clock">
+                <div class="flip-card" id="hour">--</div>
+                <div class="colon">:</div>
+                <div class="flip-card" id="minute">--</div>
+            </div>
+            <div class="date-display" id="date">Loading date...</div>
+        </div>
+
+        <div class="weather-container" id="weather-box" onclick="showCityInput()">
+            <div class="city-input-layer" id="city-input-box" onclick="event.stopPropagation()">
+                <input type="text" id="city-name" placeholder="输入城市 (如: 北京)">
+                <div>
+                    <button onclick="searchCity()">确定</button>
+                    <button onclick="hideCityInput()" style="background:#888; margin-left:5px;">取消</button>
+                </div>
+            </div>
+
+            <div id="weather-loading">正在获取天气...<br><span class="weather-tip">(点此手动设置位置)</span></div>
+            <div id="weather-content" style="display: none;">
+                <div class="weather-temp" id="w-temp">--°C</div>
+                <div class="weather-desc" id="w-desc">--</div>
+                <div class="weather-advice" id="w-advice">--</div>
+                <div class="weather-tip" style="margin-top:10px;">📍 <span id="w-loc">当前位置</span> (点击修改)</div>
+            </div>
+        </div>
+
+        <button class="bg-settings-btn" onclick="toggleBgInput()">🎨 设置背景图</button>
+        <div class="bg-input-container" id="bg-input-box">
+            <input type="text" id="bg-url-input" placeholder="粘贴图片链接 (URL)">
+            <button onclick="saveBackground()">确定</button>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="memo-box" id="memo-box-el">
+            <div class="memo-header">
+                <div class="memo-title">
+                    📝 随手记
+                </div>
+                <div class="font-scale-controls">
+                    <button onclick="changeFontSize(-2)" title="减小字号">A-</button>
+                    <button onclick="changeFontSize(2)" title="增大字号">A+</button>
+                </div>
+            </div>
+            
+            <div class="memo-editor-container">
+                <div id="memo-preview" class="memo-content-common" tabindex="0"></div>
+                <textarea id="memo-textarea" class="memo-content-common" spellcheck="false"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================
+        // 1. 全屏功能
+        // ===========================
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // ===========================
+        // 2. 时钟与日期
+        // ===========================
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('hour').textContent = h;
+            document.getElementById('minute').textContent = m;
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('date').textContent = now.toLocaleDateString('zh-CN', options);
+        }
+        setInterval(updateClock, 10000); // 10秒刷一次足够
+        updateClock();
+
+        // ===========================
+        // 3. 背景设置
+        // ===========================
+        const bgInputBox = document.getElementById('bg-input-box');
+        const bgUrlInput = document.getElementById('bg-url-input');
+        const savedBg = localStorage.getItem('imp_custom_bg');
+        if (savedBg) document.body.style.backgroundImage = `url('${savedBg}')`;
+
+        function toggleBgInput() {
+            bgInputBox.style.display = bgInputBox.style.display === 'block' ? 'none' : 'block';
+        }
+        function saveBackground() {
+            const url = bgUrlInput.value.trim();
+            if (url) {
+                document.body.style.backgroundImage = `url('${url}')`;
+                localStorage.setItem('imp_custom_bg', url);
+                bgInputBox.style.display = 'none';
+            } else {
+                document.body.style.backgroundImage = '';
+                localStorage.removeItem('imp_custom_bg');
+                bgInputBox.style.display = 'none';
+            }
+        }
+
+        // ===========================
+        // 4. 字体缩放 (修复版)
+        // ===========================
+        // 读取存储的字号，默认 18
+        let currentFontSize = parseInt(localStorage.getItem('imp_font_size')) || 18; 
+        const previewEl = document.getElementById('memo-preview');
+        const textareaEl = document.getElementById('memo-textarea');
+
+        function applyFontSize() {
+            // 直接设置两个核心元素的 style.fontSize
+            // 使用 'px' 确保绝对控制，不受父级 rem 干扰
+            previewEl.style.fontSize = `${currentFontSize}px`;
+            textareaEl.style.fontSize = `${currentFontSize}px`;
+            localStorage.setItem('imp_font_size', currentFontSize);
+        }
+        
+        function changeFontSize(delta) {
+            currentFontSize += delta;
+            if (currentFontSize < 12) currentFontSize = 12;
+            if (currentFontSize > 60) currentFontSize = 60;
+            applyFontSize();
+        }
+        // 初始化应用字体
+        applyFontSize();
+
+        // ===========================
+        // 5. 备忘录逻辑
+        // ===========================
+        const STORAGE_KEY = 'imp_memo_content_v2';
+        let savedContent = localStorage.getItem(STORAGE_KEY) || "# 欢迎使用\n点此编辑...";
+        textareaEl.value = savedContent;
+        renderPreview();
+
+        function renderPreview() {
+            marked.setOptions({ breaks: true });
+            previewEl.innerHTML = marked.parse(textareaEl.value || "点击编辑...");
+        }
+        function saveContent() {
+            localStorage.setItem(STORAGE_KEY, textareaEl.value);
+        }
+
+        previewEl.addEventListener('click', () => {
+            previewEl.style.display = 'none';
+            textareaEl.style.display = 'block';
+            textareaEl.focus();
+        });
+        textareaEl.addEventListener('blur', () => {
+            saveContent();
+            renderPreview();
+            textareaEl.style.display = 'none';
+            previewEl.style.display = 'block';
+        });
+
+        // ===========================
+        // 6. 天气系统 (含手动定位)
+        // ===========================
+        const weatherBox = document.getElementById('weather-box');
+        const cityInputLayer = document.getElementById('city-input-box');
+        const cityInput = document.getElementById('city-name');
+        const wLoc = document.getElementById('w-loc');
+
+        function showCityInput() { cityInputLayer.style.display = 'flex'; cityInput.focus(); }
+        function hideCityInput() { cityInputLayer.style.display = 'none'; }
+
+        // 尝试加载上次保存的位置
+        const savedLat = localStorage.getItem('imp_lat');
+        const savedLon = localStorage.getItem('imp_lon');
+        const savedCityName = localStorage.getItem('imp_city_name');
+
+        if (savedLat && savedLon) {
+            getWeather(savedLat, savedLon, savedCityName || "已保存位置");
+        } else {
+            // 尝试自动获取
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => getWeather(pos.coords.latitude, pos.coords.longitude, "当前位置"),
+                    (err) => {
+                        console.log("定位失败，等待手动输入");
+                        document.getElementById('weather-loading').innerHTML = "无法自动定位<br>请点击此处手动输入城市";
+                    }
+                );
+            }
+        }
+
+        // 搜索城市 (Geocoding API)
+        function searchCity() {
+            const city = cityInput.value.trim();
+            if(!city) return;
+            
+            document.getElementById('weather-loading').textContent = "正在搜索城市...";
+            hideCityInput();
+            document.getElementById('weather-content').style.display = 'none';
+            document.getElementById('weather-loading').style.display = 'block';
+
+            // OpenMeteo Geocoding
+            fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh&format=json`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.results && data.results.length > 0) {
+                        const result = data.results[0];
+                        const name = result.name;
+                        const lat = result.latitude;
+                        const lon = result.longitude;
+                        
+                        // 保存偏好
+                        localStorage.setItem('imp_lat', lat);
+                        localStorage.setItem('imp_lon', lon);
+                        localStorage.setItem('imp_city_name', name);
+
+                        getWeather(lat, lon, name);
+                    } else {
+                        alert("找不到该城市，请尝试使用拼音或英文名 (如 Beijing)");
+                        document.getElementById('weather-loading').textContent = "找不到城市，请重试";
+                    }
+                })
+                .catch(err => {
+                    alert("搜索失败，网络错误");
+                    document.getElementById('weather-loading').textContent = "网络错误";
+                });
+        }
+
+        function getWeather(lat, lon, locationName) {
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+                .then(res => res.json())
+                .then(data => {
+                    const weather = data.current_weather;
+                    const code = weather.weathercode;
+                    const temp = weather.temperature;
+
+                    document.getElementById('weather-loading').style.display = 'none';
+                    document.getElementById('weather-content').style.display = 'block';
+                    
+                    document.getElementById('w-temp').textContent = `${temp}°C`;
+                    document.getElementById('w-loc').textContent = locationName;
+
+                    let desc = "", advice = "";
+                    // 简易天气代码映射
+                    if (code === 0) { desc = "晴朗 ☀️"; advice = "阳光正好，心情也美美的。"; }
+                    else if ([1, 2, 3].includes(code)) { desc = "多云 ☁️"; advice = "天气舒适。"; }
+                    else if ([45, 48].includes(code)) { desc = "雾/霾 🌫️"; advice = "能见度低，注意行车安全。"; }
+                    else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) { desc = "有雨 🌧️"; advice = "出门别忘了带伞哦。"; }
+                    else if ([71, 73, 75, 77, 85, 86].includes(code)) { desc = "下雪 🌨️"; advice = "哇！下雪了，注意保暖。"; }
+                    else if (code >= 95) { desc = "雷暴 ⛈️"; advice = "注意避雷，减少外出。"; }
+                    else { desc = "多云"; advice = "祝你今天愉快。"; }
+
+                    if (temp < 10) advice += " 记得多穿点！";
+                    if (temp > 30) advice += " 注意防暑。";
+
+                    document.getElementById('w-desc').textContent = desc;
+                    document.getElementById('w-advice').textContent = advice;
+                })
+                .catch(err => {
+                    document.getElementById('weather-loading').textContent = "天气数据加载失败";
+                });
+        }
+    </script>
+</body>
+</html>
